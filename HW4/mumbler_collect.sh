@@ -69,30 +69,57 @@ transfer_scripts ()
 collect_files ()
 {
 	NUMBER_HOSTS=$(echo $HOSTS | wc -w)
-	(( NUMBER_FILES_PER_HOST= (NUMBER_FILES +1 )/NUMBER_HOSTS ))
+	# Calculate the number of files to be downloaded per-host, this will round down
+	(( NUMBER_FILES_PER_HOST= (NUMBER_FILES)/NUMBER_HOSTS ))
+	
+	# Calculate the number of files that will be put in each subdirectory.  
+	# Each subdir processed separately
+	(( NUMBER_FILE_PER_DIR = NUMBER_FILES_PER_HOST/PROCESSES_PER_HOST ))
+
 	LAST_PROCESSED=0
 	for host in $HOSTS
 	do
-		if [[ ! -d $STORAGE_DIR/$host ]]
-		then
-			log_msg "Making directory $STORAGE_DIR/$host"
-			mkdir $STORAGE_DIR/$host
-		fi
-		(( STARTING_INDEX = LAST_PROCESSED + 1 ))
-		(( END_INDEX = LAST_PROCESSED + NUMBER_FILES_PER_HOST ))
-		LAST_PROCESSED=$END_INDEX
-		for index in $(seq $STARTING_INDEX $END_INDEX)
+		# check that all the output directories exist, if not create them
+		for subfolder in $(seq 1 $PROCESSES_PER_HOST)
 		do
-			log_msg "Collecting file ${FILENAME_PREFIX}${index}${FILENAME_SUFFIX} on $host"
-			ssh $host -l root "cd $STORAGE_DIR/$host; wget -q ${FILENAME_PREFIX}${index}${FILENAME_SUFFIX}"
+			if [[ ! -d $STORAGE_DIR/$host/$subfolder ]]
+			then
+				log_msg "Making directory $STORAGE_DIR/$host/$subfolder"
+				mkdir -p $STORAGE_DIR/$host/$subfolder
+			fi
+		done
+
+		# End after processing the number of files for the host
+		(( END_INDEX = LAST_PROCESSED + NUMBER_FILES_PER_HOST ))
+
+		# loop over all the files to be collected for this host
+		while [[ $LAST_PROCESSED -lt $END_INDEX ]]
+		do
+			# round robin through the subfolders
+			for subfolder in $(seq 1 $PROCESSES_PER_HOST)
+			do
+				log_msg "Collecting file ${FILENAME_PREFIX}${LAST_PROCESSED}${FILENAME_SUFFIX} on $host"
+				ssh $host -l root "cd $STORAGE_DIR/$host/$subfolder; wget -q ${FILENAME_PREFIX}${LAST_PROCESSED}${FILENAME_SUFFIX}"
+				(( LAST_PROCESSED++ ))
+				if [[ $LAST_PROCESSED -eq $END_INDEX ]]
+				then
+					break
+				fi
+			done
 		done
 	done
-	# if there is an uneven spread do the last few on the final node
-	(( STARTING_INDEX = LAST_PROCESSED + 1 ))
-	for index in $(seq $STARTING_INDEX $NUMBER_FILES)
+	while [[ $LAST_PROCESSED -lt $NUMBER_FILES ]]
 	do
-		log_msg "Extra onto final host, collecting file ${FILENAME_PREFIX}${index}${FILENAME_SUFFIX} on $host"
-		ssh $host -l root "cd $STORAGE_DIR/$host; wget -q ${FILENAME_PREFIX}${index}${FILENAME_SUFFIX}"
+		for subfolder in $(seq 1 $PROCESSES_PER_HOST)
+		do
+			log_msg "Extra onto final host, collecting file ${FILENAME_PREFIX}${LAST_PROCESSED}${FILENAME_SUFFIX} on $host"
+			ssh $host -l root "cd $STORAGE_DIR/$host/$subfolder; wget -q ${FILENAME_PREFIX}${LAST_PROCESSED}${FILENAME_SUFFIX}"
+			(( LAST_PROCESSED++ ))
+			if [[  $LAST_PROCESSED -eq $NUMBER_FILES ]]
+			then
+				break
+			fi
+		done
 	done
 }
 
