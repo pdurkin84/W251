@@ -111,6 +111,7 @@ get_command_line_options ()
 			v)  VERBOSE="Y"
 				;;
 			c)	collect_files
+				exit
 				;;
 			t)	transfer_scripts
 				exit
