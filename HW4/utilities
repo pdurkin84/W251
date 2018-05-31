@@ -1,0 +1,33 @@
+# Set of utilities generic to any script
+
+# Default settings for logging
+LOG_FILE="$HOME/${THIS_SCRIPT}.log"
+QUIET="N"
+VERBOSE="N"
+
+################################################################################
+#	Function:		log_msg
+#	Description:	Writes log to the logfile
+################################################################################
+
+log_msg ()
+{
+	if [[ $QUIET = "N" ]]
+	then
+		echo -e "$(date): $*" >> $LOG_FILE
+	fi
+	if [[ $VERBOSE = "Y" ]]
+	then
+		echo -e "$(date): $*"
+	fi
+}
+
+################################################################################
+#	Function:		log_error
+#	Description:	Writes errors to the logfile
+################################################################################
+
+log_error ()
+{
+	log_msg "Error: $*"
+}
