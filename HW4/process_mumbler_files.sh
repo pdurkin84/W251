@@ -26,13 +26,14 @@ FILE_NUMBER=0
 
 for file in $SOURCE_FILE_DIR/*.zip
 do 
-	exec 3<> ${OUTPUT_FILE}_${FILE_NUMBER}
-	echo "$(date): Processing file $file to ${OUTPUT_FILE}_${FILE_NUMBER}"
 	if [[ -f ${OUTPUT_FILE}_${FILE_NUMBER} ]]
 	then
 		echo "removing ${OUTPUT_FILE}_${FILE_NUMBER}"
 		/bin/rm ${OUTPUT_FILE}_${FILE_NUMBER}
 	fi
+	exec 3<> ${OUTPUT_FILE}_${FILE_NUMBER}
+	echo "$(date): Processing file $file to ${OUTPUT_FILE}_${FILE_NUMBER}"
+	(( FILE_NUMBER += 1 ))
 
 	LAST_KEY=""
 	CURRENT_KEY_COUNT=0
