@@ -36,11 +36,6 @@ print_help_and_exit ()
 	echo -e "$(tput bold)Usage:$(tput rmso) $THIS_SCRIPT [-h|-?] [-q] [-v] [-c] [-t]"
 	echo -e "\t\t -h, -?\t\t Display the help and exit"
 	echo -e "\t\t -q\t\t Quiet, no logging to file"
-	echo -e "\t\t -v\t\t Verbose, log to the screen and to logfile"
-	echo -e "\t\t -t\t\t Transfer these scripts to all the hosts"
-	echo -e "\t\t -c <comma,separated> \t comma separated list of file indexes to collect"
-	echo -e "\t\t -i\t\t Host index, uses a subdirectory with this if there are more than"
-	echo -e "\t\t\t\t one processes running on this host"
 }
 
 ################################################################################
@@ -63,59 +58,6 @@ transfer_scripts ()
 	done
 }
 
-
-################################################################################
-#   Function:		collect_file_list
-#   Descripition:   transfers a range of files on each server into the folder
-#					in the storage directroy for each server.  First figures
-#					out how many files to transfer in each server
-################################################################################
-
-collect_file_list ()
-{
-	OUTPUT_DIR=$STORAGE_DIR/$(hostname)/$HOST_INDEX/
-	if [[ ! -d $OUTPUT_DIR ]]
-	then
-		log_msg "Making directory $OUTPUT_DIR"
-		mkdir -p $OUTPUT_DIR
-	fi
-
-	for fileindex in $(echo $COLLECT_FILES | tr "," " ")
-	do
-		log_msg "Processing index $fileindex, to $OUTPUT_DIR"
-
-		# keep track of the current key being processed and the count
-		CURRENT_KEY=""
-		CURRENT_KEY_COUNT=0
-
-		# Open the file for output
-		exec 3<> ${OUTPUT_DIR}/MumProc.${fileindex}.out
-
-		# This is a little long.  It does the following:
-		# 1) Uses wget to get the file but does not write to disk but to standard out
-		# 2) unzips it
-		# 3) Extracts only lines with alphabetic words and single quotes ('), however will not accept
-		#     a quote as the first letter of a word
-		# 4) only collects the first and the third (words and counts) fields
-		# 5) Pipes into a loop that aggregates the counts for duplicate keys
-		wget -q -O - wget -q ${FILENAME_PREFIX}${fileindex}${FILENAME_SUFFIX} | gunzip | sed -e "s/^\([a-zA-Z][a-zA-Z\']* [a-zA-Z][a-zA-Z\']*\)\t[0-9]*\t\([0-9]*\)\t.*/\L\1\t\2/;t;d" | while IFS=$'\t' read -r -a myInputArray
-		do
-			if [[ ${myInputArray[0]} == "$CURRENT_KEY" ]]
-			then
-					(( CURRENT_KEY_COUNT += ${myInputArray[1]} ))
-			else
-				if [[ "$CURRENT_KEY" != "" ]]
-				then
-					echo -e "${CURRENT_KEY}\t${CURRENT_KEY_COUNT}" >&3
-				fi
-				CURRENT_KEY_COUNT=${myInputArray[1]}
-				CURRENT_KEY="${myInputArray[0]}"
-			fi
-		done
-		echo -e "${CURRENT_KEY}\t${CURRENT_KEY_COUNT}" >&3
-		exec 3>&-
-	done
-}
 
 ################################################################################
 #   Function:		collect_files
@@ -188,16 +130,15 @@ collect_files ()
 
 get_command_line_options ()
 {
-	while getopts h?qvi:c:t option
+	while getopts h?qvsct option
 	do
 		case $option in
 			q)  QUIET="Y"
 				;;
 			v)  VERBOSE="Y"
 				;;
-			c)	COLLECT_FILES=$OPTARG	# comma separated list of arguments
-				;;
-			i)	HOST_INDEX=$OPTARG
+			c)	collect_files
+				exit
 				;;
 			t)	transfer_scripts
 				exit
@@ -212,15 +153,7 @@ get_command_line_options ()
 
 main ()
 {
-	COLLECT_FILES=""
-	HOST_INDEX=""
 	get_command_line_options $*
-	if [[ $COLLECT_FILES != "" ]]
-	then
-		collect_file_list
-	else
-		echo "NOthing to do"
-	fi
 }
 
 main $*
