@@ -33,14 +33,49 @@ fi
 
 print_help_and_exit ()
 {
-	echo -e "$(tput bold)Usage:$(tput rmso) $THIS_SCRIPT [-h|-?] [-q] [-v] [-c] [-t]"
+	echo -e "$(tput bold)Usage:$(tput rmso) $THIS_SCRIPT [-h|-?] [-q] [-v] [-i index] [-c list] [-t] [-a <dest>]"
 	echo -e "\t\t -h, -?\t\t Display the help and exit"
 	echo -e "\t\t -q\t\t Quiet, no logging to file"
 	echo -e "\t\t -v\t\t Verbose, log to the screen and to logfile"
 	echo -e "\t\t -t\t\t Transfer these scripts to all the hosts"
 	echo -e "\t\t -c <comma,separated> \t comma separated list of file indexes to collect"
-	echo -e "\t\t -i\t\t Host index, uses a subdirectory with this if there are more than"
+	echo -e "\t\t -i <index number>\t Host index, uses a subdirectory with this if there are more than"
 	echo -e "\t\t\t\t one processes running on this host"
+	echo -e "\t\t -a <directory>\t Take the files in the current directory and split them into subfiles in the"
+	echo -e "\t\t\t\t destination directory based on the first letter of each line in the file.  A separate file"
+	echo -e "\t\t\t\t will be created for each letter and one at the end for any non-roman alphabet characters"
+	echo -e "\t\t\t\t The files will have the <letter>_hostname_indexOfOriginal.mblr format"
+}
+
+################################################################################
+#   Function:		get_command_line_options
+#   Descripition:   Reads in the command line and prints out the help on errors
+################################################################################
+
+get_command_line_options ()
+{
+	while getopts h?qvi:c:a:t option
+	do
+		case $option in
+			q)  QUIET="Y"
+				;;
+			v)  VERBOSE="Y"
+				;;
+			c)	COLLECT_FILES=$OPTARG	# comma separated list of arguments
+				;;
+			i)	HOST_INDEX=$OPTARG
+				;;
+			t)	transfer_scripts
+				exit
+				;;
+			a)	DEST_FOR_ALPHABETIZED=$OPTARG
+				;;
+			h)	print_help_and_exit
+				;;
+			?)	print_help_and_exit
+				;;
+		esac
+	done
 }
 
 ################################################################################
@@ -102,7 +137,7 @@ collect_file_list ()
 		do
 			if [[ ${myInputArray[0]} == "$CURRENT_KEY" ]]
 			then
-					(( CURRENT_KEY_COUNT += ${myInputArray[1]} ))
+				(( CURRENT_KEY_COUNT += ${myInputArray[1]} ))
 			else
 				if [[ "$CURRENT_KEY" != "" ]]
 				then
@@ -114,6 +149,44 @@ collect_file_list ()
 		done
 		echo -e "${CURRENT_KEY}\t${CURRENT_KEY_COUNT}" >&3
 		exec 3>&-
+	done
+}
+
+################################################################################
+#	Function:		alphabetize_files
+#	Description:	This function takes the files in the current directory, assumes
+#					they are output from this script and breaks each file into
+#					27 smaller files in the distination directory based on the
+#					letter of the alphabet starting the key in the file.
+#
+#					This is for optimizing the later mumbler
+#					Note: to reduce network traffic we could break these down
+#					even futher to the first 2-3 letters of each key.  The more
+#					files and the smaller they are the less network traffic
+################################################################################
+
+alphabetize_files ()
+{
+	# Check if the output folder exists and create it if it does not
+	if [[ ! -d $DEST_FOR_ALPHABETIZED ]]
+	then
+		log_msg "Making directory $DEST_FOR_ALPHABETIZED"
+		mkdir -p $DEST_FOR_ALPHABETIZED 2>/dev/null
+	fi
+
+	# for all files in the current folder
+	for file in MumProc.*.out
+	do
+		TMP_INDEX=${file%.out}
+		FILE_INDEX=${TMP_INDEX#MumProc.}
+		HOSTNAME=$(hostname)
+		OUTPUT_FILENAME_SUFFIX=_${HOSTNAME}_${FILE_INDEX}.mblr
+		for letter in {a..z}
+		do
+			egrep "^$letter" $file > ${DEST_FOR_ALPHABETIZED}/${letter}_${OUTPUT_FILENAME_SUFFIX}
+		done
+		# the non alphabetic characters
+		egrep "^[^a-z]" $file > ${DEST_FOR_ALPHABETIZED}/zz_${OUTPUT_FILENAME_SUFFIX}
 	done
 }
 
@@ -181,45 +254,21 @@ collect_files ()
 	done
 }
 
-################################################################################
-#   Function:		get_command_line_options
-#   Descripition:   Reads in the command line and prints out the help on errors
-################################################################################
-
-get_command_line_options ()
-{
-	while getopts h?qvi:c:t option
-	do
-		case $option in
-			q)  QUIET="Y"
-				;;
-			v)  VERBOSE="Y"
-				;;
-			c)	COLLECT_FILES=$OPTARG	# comma separated list of arguments
-				;;
-			i)	HOST_INDEX=$OPTARG
-				;;
-			t)	transfer_scripts
-				exit
-				;;
-			h)	print_help_and_exit
-				;;
-			?)	print_help_and_exit
-				;;
-		esac
-	done
-}
 
 main ()
 {
 	COLLECT_FILES=""
 	HOST_INDEX=""
+	DEST_FOR_ALPHABETIZED=""
 	get_command_line_options $*
 	if [[ $COLLECT_FILES != "" ]]
 	then
 		collect_file_list
+	elif [[ $DEST_FOR_ALPHABETIZED != "" ]]
+	then
+		alphabetize_files
 	else
-		echo "NOthing to do"
+		echo "Nothing to do"
 	fi
 }
 
