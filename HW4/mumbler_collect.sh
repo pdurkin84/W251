@@ -1,5 +1,10 @@
 #!/bin/bash
 
+################################################################################
+#	Script:		mumbler_collect.sh
+#	Description:	has a number of purposes
+################################################################################
+
 APP_NAME="mumbler"
 
 THIS_SCRIPT=$(basename $0)

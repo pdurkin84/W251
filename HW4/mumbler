@@ -1,0 +1,204 @@
+#!/bin/bash
+
+THIS_SCRIPT=$(basename $0)
+if [[ ${0:0:1} = "/" ]]
+then
+    SCRIPT_DIR=$(dirname $0)
+else
+	SCRIPT_DIR="$PWD/$( dirname $0 )"
+fi
+
+if [[ -f $SCRIPT_DIR/utilities ]]
+then
+    source $SCRIPT_DIR/utilities
+else
+	echo "Unable to find utilities file, exiting"
+	exit 1
+fi
+
+################################################################################
+#	Function:		get_command_line_args
+#	Description:	Gets the command line args.  There are two modes, the one
+#					specified in the requirements which is :
+#					mumbler.sh word count
+#					and a subordinate one that just returns the next word from
+#					a file
+#					mumbler.sh -s <file> -w <word>
+#					These are mutually exclusive
+################################################################################
+
+get_command_line_args ()
+{
+	FILE_NAME=""
+	WORD_NAME=""
+	CURRENT_WORD=""
+	MAX_WORDS=""
+	while getopts s:w:v option
+	do
+		case $option in
+			s)	FILE_NAME=$OPTARG
+				;;
+			w)	WORD_NAME=$OPTARG
+				;;
+			v)	VERBOSE="Y"
+				;;
+		esac
+	done
+	if [[ -z $FILE_NAME || -z $WORD_NAME ]]
+	then
+		log_msg "FILE_NAME = $FILE_NAME, WORD_NAME= $WORD_NAME"
+		# no command line options so assume master
+		if [[ $# -ne 2 ]]
+		then
+			echo "Usage: $0 <starting word> <max words>"
+			exit 1
+		fi
+
+		CURRENT_WORD=$1
+#		CURRENT_WORD=$(echo $1 | sed -e "s/\([^\']*\)\'\(.*\)/\1\\'\2/g")
+		MAX_WORDS=$2
+		# validate max_words
+		if [[ ! "$MAX_WORDS" = [0-9]* ]]
+		then
+			echo "$MAX_WORDS should be a number"
+			exit 2
+		fi
+		# Reduce by one as we already have our first word
+		(( MAX_WORDS-- ))
+	else
+		# Subordinate, call the subordinate function
+		get_next_word
+	fi
+}
+
+################################################################################
+#	Function:		get_next_word
+#	Description:	get the word from the file.  This first calculates the sum,
+#					then gets a random number between 0 and the sum, then loops
+#					through all the keys with word as the prefix of the key
+#					incrementing the count until we are just above the random
+#					value.  This is the key that gets returned
+################################################################################
+
+get_next_word ()
+{
+	TOTAL_SUM=$(egrep "^${WORD_NAME} " $FILE_NAME | cut -f2 | paste -sd+  | bc)
+	if [[ -z $TOTAL_SUM ]]
+	then
+		echo ""
+		exit 0
+	fi
+	RAND_NUM=$(shuf -i 0-$TOTAL_SUM -n 1)
+	RUNNING_TOTAL=0
+	while IFS=$'\t' read -r key value
+	do
+		(( RUNNING_TOTAL += value ))
+		if [[ $RAND_NUM -lt $RUNNING_TOTAL ]]
+		then
+			# once our count is past the random value then we have found our word
+			echo "$(echo $key | cut -d" " -f2)"
+			exit 0
+		fi
+	done < <(egrep "^${WORD_NAME} " $FILE_NAME)
+}
+
+################################################################################
+#	Function:		main
+#	Description:	Checks first if this is a subordinate execution and executes
+#					that, otherwise it controls the full output
+################################################################################
+
+main ()
+{
+	get_command_line_args $*
+	if [[ ! -z $FILE_NAME && ! -z $WORD_NAME ]]
+	then
+		log_msg "Executing in slave mode"
+		get_next_word
+		exit 0
+	fi
+	# Else this is a master.  Get all the files
+	KEY_FILE_FOLDER=/gpfs/gpfsfpo/mumbler/final
+
+	# will store the full sentence here
+	FULL_SENTENCE="$CURRENT_WORD"
+
+	# Hostname of this server
+	LOCAL_SERVER=$(hostname | cut -d"." -f1)
+
+	# Associative array to lookup the host holding the file
+	declare -A FILE_TO_HOST
+
+	# A list of all the keys in the filenames
+	FILE_NAME_KEYS=""
+
+	# get a list of all the file keys and a mapping to the hosts that they are on
+	for file in $KEY_FILE_FOLDER/*mblr
+	do
+		FILE_NAME_ONLY=$(basename $file)
+		KEY_NAME=${FILE_NAME_ONLY%_*}
+		HOSTNAME=$(echo ${FILE_NAME_ONLY#*_} | cut -d"." -f1)
+		log_msg "Adding mapping from $KEY_NAME to $HOSTNAME"
+		FILE_TO_HOST[$KEY_NAME]=$HOSTNAME
+		FILE_NAME_KEYS="$FILE_NAME_KEYS $KEY_NAME"
+	done
+	log_msg "FILE_NAME_KEYS = $FILE_NAME_KEYS"
+
+	while [[ $MAX_WORDS -gt 0 ]]
+	do
+		(( MAX_WORDS-- ))
+		log_msg "Searching for key starting $CURRENT_WORD, iteration $MAX_WORDS"
+		# find the file that the key is in if it exists
+		# First check if it is a key in the list of filenames
+		if [[ "$FILE_NAME_KEYS" = *" $CURRENT_WORD "* || "$FILE_NAME_KEYS" = "$CURRENT_WORD "* || "$FILE_NAME_KEYS" = *" ${CURRENT_WORD}" ]]
+		then
+			CURRENT_FILE_KEY=$CURRENT_WORD
+		else
+			# this adds the current key into the list of keys and sorts them alphabetically
+			# then extracts the key just after it in the sorted list.  This is the prefix of
+			# the file containing this key (if it exists)
+			CURRENT_FILE_KEY=$(echo $FILE_NAME_KEYS $CURRENT_WORD | tr " " "\n" | sort | tr "\n" " " | sed -e "s/.* ${CURRENT_WORD} \([^ ]*\) .*/\1/g")
+			if [[ "$CURRENT_FILE_KEY" = *" "* ]]
+			then
+				# may have matched at the start of the string, find at the start instead
+				log_msg "Checking if at start of line"
+				CURRENT_FILE_KEY=$(echo $FILE_NAME_KEYS $CURRENT_WORD | tr " " "\n" | sort | tr "\n" " " | sed -e "s/^${CURRENT_WORD} \([^ ]*\) .*/\1/g")
+			fi
+			log_msg "CURRENT_WORD = $CURRENT_WORD : CURRENT_FILE_KEY = $CURRENT_FILE_KEY"
+		fi
+		KEY_FILE_HOST=${FILE_TO_HOST[$CURRENT_FILE_KEY]}
+		KEY_FILE=$KEY_FILE_FOLDER/${CURRENT_FILE_KEY}_${KEY_FILE_HOST}.mblr
+
+		# Verify it
+		if [[ ! -f $KEY_FILE ]]
+		then
+			log_msg "Unable to find keyfile: $KEY_FILE"
+			exit 1
+		fi
+		
+		# Now get the next part of the key.  If it is on the local server do not ssh, otherwise do
+		if [[ "$KEY_FILE_HOST" = "$LOCAL_SERVER" ]]
+		then
+			log_msg "Checking local server to get next key: $CURRENT_WORD"
+			NEXT_WORD=$($SCRIPT_DIR/$THIS_SCRIPT -w $CURRENT_WORD -s $KEY_FILE)
+		else
+			log_msg "Logging into server $KEY_FILE_HOST to get next key: $CURRENT_WORD"
+			NEXT_WORD=$(ssh $KEY_FILE_HOST "$SCRIPT_DIR/$THIS_SCRIPT -w $CURRENT_WORD -s $KEY_FILE")
+		fi
+
+		# verify if we received a key
+		if [[ -z $NEXT_WORD ]]
+		then
+			log_msg "No return, unable to find $CURRENT_WORD as a first part of a key, exiting"
+			MAX_WORDS=0
+		else
+			log_msg "Got $NEXT_WORD as a return"
+			FULL_SENTENCE="$FULL_SENTENCE $NEXT_WORD"
+			CURRENT_WORD=$NEXT_WORD
+		fi
+	done
+	
+	echo "Final sentence: $FULL_SENTENCE"
+}
+
+main $*

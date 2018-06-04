@@ -7,7 +7,8 @@ VERBOSE="N"
 
 ################################################################################
 #	Function:		log_msg
-#	Description:	Writes log to the logfile
+#	Description:	Writes log to the logfile, if VERBOSE specified then also 
+#					logs to the screen
 ################################################################################
 
 log_msg ()
@@ -24,10 +25,11 @@ log_msg ()
 
 ################################################################################
 #	Function:		log_error
-#	Description:	Writes errors to the logfile
+#	Description:	Writes errors to the logfile and to the screen
 ################################################################################
 
 log_error ()
 {
-	log_msg "Error: $*"
+	log_msg "$(date): Error: $*"
+	echo -e "$(date): Error: $*"
 }
