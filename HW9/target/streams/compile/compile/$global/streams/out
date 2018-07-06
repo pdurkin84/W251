@@ -1,5 +1,4 @@
-[0m[[0m[31merror[0m] [0m[0m/root/Git/W251/HW9/twitter_popularity.scala:61:160: not enough arguments for method count: (p: ((Int, (String, List[String], List[String]))) => Boolean)Int.[0m
-[0m[[0m[31merror[0m] [0m[0mUnspecified value parameter p.[0m
-[0m[[0m[31merror[0m] [0m[0m				println("\nThe top %d most popular topics in last %d seconds (out of %s total, start time %s seconds ago):".format(samplingNumber, duration, lastList.count(), totalDuration))[0m
-[0m[[0m[31merror[0m] [0m[0m				                                                                                                                                                           ^[0m
+[0m[[0m[31merror[0m] [0m[0m/root/Git/W251/HW9/twitter_popularity.scala:61:41: ')' expected but '=>' found.[0m
+[0m[[0m[31merror[0m] [0m[0m					.map{case(count,(tag,author,users) => (tag, (author,users,count)) }[0m
+[0m[[0m[31merror[0m] [0m[0m					                                   ^[0m
 [0m[[0m[31merror[0m] [0m[0mone error found[0m

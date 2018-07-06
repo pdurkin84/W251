@@ -4,12 +4,16 @@
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$hashTags$1$1$$anonfun$2.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$6.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$6.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$main$1$$anonfun$10.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$main$1$$anonfun$10.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$5.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$5.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	org[0m
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org[0m
 [0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$7.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$7.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$main$1$$anonfun$9.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$main$1$$anonfun$9.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$hashTags$1$1.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$hashTags$1$1.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark[0m
@@ -40,4 +44,6 @@
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$hashTags$1$1$$anonfun$4.class[0m
 [0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$hashTags$1$1$$anonfun$4.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$main$1$$anonfun$8.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	  /root/Git/W251/HW9/target/scala-2.11/classes/org/apache/spark/examples/streaming/twitter/twitter_popularity$$anonfun$main$1$$anonfun$8.class[0m
 [0m[[0m[0minfo[0m] [0m[0mDone packaging.[0m
